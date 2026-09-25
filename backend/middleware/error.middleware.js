@@ -8,7 +8,7 @@ export const errorHandler=(err,req,res,next)=>{
     const statusCode=err.statusCode || 500;
     const message=err.message || "Internal Server Error";
 
-    if(err.name===CastError){
+    if(err.name==="CastError"){
         statusCode=400;
         message=`Invalid ${err.path}: ${err.value}`;
     }
