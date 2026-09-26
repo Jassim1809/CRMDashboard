@@ -1,6 +1,7 @@
 [README.md](https://github.com/user-attachments/files/32688370/README.md)
 # 🚀 Nexus CRM — Intelligent Sales & Pipeline Management
 
+
 A modern, production-ready Customer Relationship Management (CRM) application with a visual drag-and-drop pipeline, real-time analytics, lead tracking, contact management, notes, tasks, and Gemini AI-assisted sales insights.
 
 ---
