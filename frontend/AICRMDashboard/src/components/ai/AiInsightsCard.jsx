@@ -5,7 +5,7 @@ import { aiApi } from "../../lib/services";
 import { toast } from "sonner";
 
 /**
- * AI Sales Insights panel — calls Gemini to analyse the current pipeline and
+ * AI Sales Insights panel — calls backend AI to analyse the current pipeline and
  * surface a health score, observations and recommendations.
  */
 export function AiInsightsCard() {
@@ -33,7 +33,7 @@ export function AiInsightsCard() {
           </div>
           <div>
             <h3 className="text-base font-semibold text-ink">AI Sales Insights</h3>
-            <p className="text-xs text-ink-soft">Powered by Gemini</p>
+            <p className="text-xs text-ink-soft">Intelligent Pipeline Overview</p>
           </div>
         </div>
         {data && (

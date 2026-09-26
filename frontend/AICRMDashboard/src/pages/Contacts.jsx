@@ -40,12 +40,6 @@ import { contactsApi } from "../lib/services";
 import { relative, shortDate } from "../lib/format";
 import { cn } from "../lib/utils";
 
-/* ─── useFlip ─────────────────────────────────────────────────────────────────
-   FLIP animation: when the ordered list changes (e.g. a contact is starred and
-   floats to the top), smoothly slide each card from its previous position to
-   its new one. Reads element rects before/after the reorder and animates the
-   inverse transform to zero. Respects prefers-reduced-motion.
-   ──────────────────────────────────────────────────────────────────────────── */
 function useFlip(dep) {
   const containerRef = useRef(null);
   const prevRects = useRef(new Map());
@@ -55,7 +49,6 @@ function useFlip(dep) {
     if (!el) return;
     const nodes = Array.from(el.querySelectorAll("[data-flip-id]"));
 
-    // Measure all new positions first, before applying any transforms.
     const nextRects = new Map();
     nodes.forEach((n) => nextRects.set(n.dataset.flipId, n.getBoundingClientRect()));
 
@@ -67,7 +60,7 @@ function useFlip(dep) {
       nodes.forEach((n) => {
         const oldRect = prevRects.current.get(n.dataset.flipId);
         const newRect = nextRects.get(n.dataset.flipId);
-        if (!oldRect) return; // newly added card — no slide-in
+        if (!oldRect) return;
         const dx = oldRect.left - newRect.left;
         const dy = oldRect.top - newRect.top;
         if (dx || dy) {
@@ -88,25 +81,18 @@ function useFlip(dep) {
   return containerRef;
 }
 
-/* ─── Contacts page ──────────────────────────────────────────────────────────
-   Full CRUD management: KPI strip, tag chip filter bar, card/table views,
-   drawer detail, add/edit dialog (react-hook-form), delete confirm.
-   All filtering is client-side for instant response.
-   ──────────────────────────────────────────────────────────────────────────── */
 export default function Contacts() {
-  // null = loading, [] = empty, [...] = loaded
   const [contacts, setContacts] = useState(null);
   const [filters, setFilters] = useState({ search: "", tag: "" });
-  const [view, setView] = useState("grid"); // "grid" | "table"
+  const [view, setView] = useState("grid");
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState(null);   // contact being edited
-  const [selected, setSelected] = useState(null); // contact open in drawer
-  const [toDelete, setToDelete] = useState(null); // contact pending deletion
+  const [editing, setEditing] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [favLoading, setFavLoading] = useState({}); // { [id]: bool }
+  const [favLoading, setFavLoading] = useState({});
 
-  // Fetch all contacts and store them
   const load = () => {
     setContacts(null);
     contactsApi
@@ -116,9 +102,6 @@ export default function Contacts() {
   };
   useEffect(load, []);
 
-  // ── Derived data ────────────────────────────────────────────────────
-
-  // Collect unique tags across all contacts for the chip filter row
   const allTags = useMemo(() => {
     if (!contacts) return [];
     const set = new Set();
@@ -126,7 +109,6 @@ export default function Contacts() {
     return Array.from(set).sort();
   }, [contacts]);
 
-  // Per-tag counts (from all contacts, not just filtered) for live chip counts
   const tagCounts = useMemo(() => {
     const c = { All: contacts?.length || 0 };
     allTags.forEach((t) => {
@@ -137,7 +119,6 @@ export default function Contacts() {
     return c;
   }, [contacts, allTags]);
 
-  // KPI numbers computed from the full (unfiltered) contacts list
   const kpis = useMemo(() => {
     const list = contacts || [];
     const favorites = list.filter((c) => c.favorite).length;
@@ -146,7 +127,6 @@ export default function Contacts() {
     return { total: list.length, favorites, companies: uniqueCompanies, tagged };
   }, [contacts]);
 
-  // Client-side filtering: search by name/email/company and by tag
   const filtered = useMemo(() => {
     if (!contacts) return [];
     return contacts.filter((c) => {
@@ -163,8 +143,6 @@ export default function Contacts() {
     });
   }, [contacts, filters]);
 
-  // Favorites float to the top; everything else keeps its relative order
-  // (Array.prototype.sort is stable).
   const ordered = useMemo(
     () => [...filtered].sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0)),
     [filtered]
@@ -172,11 +150,8 @@ export default function Contacts() {
 
   const filtersActive = filters.search || filters.tag;
 
-  // FLIP refs — animate cards/rows sliding to their new position on reorder.
   const gridRef = useFlip(ordered);
   const tableRef = useFlip(ordered);
-
-  // ── Handlers ──────────────────────────────────────────────────────
 
   const openNew = () => {
     setEditing(null);
@@ -191,21 +166,17 @@ export default function Contacts() {
 
   const handleSaved = () => load();
 
-  // Toggle favorite star — optimistic in-place update (no full reload, so the
-  // grid doesn't unmount and the scroll position is preserved).
   const toggleFavorite = async (e, contact) => {
     e.stopPropagation();
     if (favLoading[contact._id]) return;
     const next = !contact.favorite;
     setFavLoading((prev) => ({ ...prev, [contact._id]: true }));
-    // Flip the star immediately in local state.
     setContacts((prev) =>
       (prev || []).map((c) => (c._id === contact._id ? { ...c, favorite: next } : c))
     );
     try {
       await contactsApi.update(contact._id, { favorite: next });
     } catch (err) {
-      // Revert on failure.
       setContacts((prev) =>
         (prev || []).map((c) =>
           c._id === contact._id ? { ...c, favorite: !next } : c
@@ -234,7 +205,6 @@ export default function Contacts() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ── */}
       <PageHeader
         title="Contacts"
         subtitle="Your people and professional relationships."
@@ -244,7 +214,6 @@ export default function Contacts() {
         </Button>
       </PageHeader>
 
-      {/* ── KPI strip ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           icon={Users}
@@ -272,9 +241,7 @@ export default function Contacts() {
         />
       </div>
 
-      {/* ── Toolbar Card ── */}
       <Card className="space-y-4 p-4">
-        {/* Search */}
         <div className="relative">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
           <input
@@ -285,16 +252,13 @@ export default function Contacts() {
           />
         </div>
 
-        {/* Tag chips + meta row */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* "All" chip */}
           <TagChip
             label="All"
             count={tagCounts.All}
             active={!filters.tag}
             onClick={() => setFilters({ ...filters, tag: "" })}
           />
-          {/* One chip per unique tag */}
           {allTags.map((t) => (
             <TagChip
               key={t}
@@ -307,7 +271,6 @@ export default function Contacts() {
             />
           ))}
 
-          {/* Right-aligned controls */}
           <div className="ml-auto flex items-center gap-3">
             {filtersActive && (
               <button
@@ -326,7 +289,6 @@ export default function Contacts() {
         </div>
       </Card>
 
-      {/* ── Results — loading / empty / grid / table ── */}
       {contacts === null ? (
         <div className="flex items-center justify-center py-20">
           <Spinner />
@@ -349,7 +311,6 @@ export default function Contacts() {
           }
         />
       ) : view === "grid" ? (
-        /* ── Card grid view ── */
         <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {ordered.map((contact) => (
             <ContactCard
@@ -365,7 +326,6 @@ export default function Contacts() {
           ))}
         </div>
       ) : (
-        /* ── Table view ── */
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -398,7 +358,6 @@ export default function Contacts() {
         </Card>
       )}
 
-      {/* ── Detail Drawer ── */}
       <ContactDrawer
         open={Boolean(selected)}
         contact={selected}
@@ -407,7 +366,6 @@ export default function Contacts() {
         onDelete={() => setToDelete(selected)}
       />
 
-      {/* ── Add / Edit Dialog ── */}
       <ContactFormDialog
         open={formOpen}
         contact={editing}
@@ -415,7 +373,6 @@ export default function Contacts() {
         onSaved={handleSaved}
       />
 
-      {/* ── Delete confirmation ── */}
       <ConfirmDialog
         open={Boolean(toDelete)}
         onClose={() => setToDelete(null)}
@@ -429,10 +386,6 @@ export default function Contacts() {
   );
 }
 
-/* ─── StatTile ───────────────────────────────────────────────────────────────
-   KPI card: tinted icon square + label + large value.
-   Copied from Leads' StatTile pattern.
-   ──────────────────────────────────────────────────────────────────────────── */
 function StatTile({ icon: Icon, label, value, tint }) {
   return (
     <Card className="p-4">
@@ -454,9 +407,6 @@ function StatTile({ icon: Icon, label, value, tint }) {
   );
 }
 
-/* ─── TagChip ────────────────────────────────────────────────────────────────
-   Quick-filter pill for a single tag. Copied from Leads' StageChip pattern.
-   ──────────────────────────────────────────────────────────────────────────── */
 function TagChip({ label, count, active, onClick }) {
   return (
     <button
@@ -481,9 +431,6 @@ function TagChip({ label, count, active, onClick }) {
   );
 }
 
-/* ─── ViewToggle ─────────────────────────────────────────────────────────────
-   Segmented Table2 / LayoutGrid icon toggle. Copied from Leads.
-   ──────────────────────────────────────────────────────────────────────────── */
 function ViewToggle({ view, onChange }) {
   const options = [
     { value: "grid", icon: LayoutGrid, label: "Card view" },
@@ -511,10 +458,6 @@ function ViewToggle({ view, onChange }) {
   );
 }
 
-/* ─── ContactCard ────────────────────────────────────────────────────────────
-   Single premium contact tile for the card grid view.
-   Shows avatar, name, title/company, favorite toggle, tags, email/phone.
-   ──────────────────────────────────────────────────────────────────────────── */
 function ContactCard({
   contact,
   flipId,
@@ -528,9 +471,8 @@ function ContactCard({
     <div
       data-flip-id={flipId}
       onClick={onOpen}
-      className="relative cursor-pointer rounded-2xl border border-line bg-surface p-5 shadow-(--shadow-card) transition-all duration-200 hover:-translate-y-0.5 hover:shadow-(--shadow-pop)"
+      className="relative cursor-pointer rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)]"
     >
-      {/* Favorite star — top right, stopPropagation so card click doesn't fire */}
       <button
         onClick={(e) => onToggleFavorite(e, contact)}
         disabled={favLoading}
@@ -545,7 +487,6 @@ function ContactCard({
         />
       </button>
 
-      {/* Dropdown — positioned below the star */}
       <div
         className="absolute right-3 top-10 mt-1"
         onClick={(e) => e.stopPropagation()}
@@ -566,7 +507,6 @@ function ContactCard({
         </Dropdown>
       </div>
 
-      {/* Avatar + identity */}
       <div className="flex items-start gap-3 pr-8">
         <Avatar name={contact.name} size="md" />
         <div className="min-w-0">
@@ -581,7 +521,6 @@ function ContactCard({
         </div>
       </div>
 
-      {/* Tags */}
       {contact.tags?.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {contact.tags.slice(0, 3).map((tag) => (
@@ -600,7 +539,6 @@ function ContactCard({
         </div>
       )}
 
-      {/* Contact info rows */}
       <div className="mt-3 space-y-1.5">
         {contact.email && (
           <div className="flex items-center gap-2 text-sm text-ink-soft min-w-0">
@@ -619,9 +557,6 @@ function ContactCard({
   );
 }
 
-/* ─── ContactTableRow ────────────────────────────────────────────────────────
-   Single row for the table view.
-   ──────────────────────────────────────────────────────────────────────────── */
 function ContactTableRow({
   contact,
   flipId,
@@ -637,7 +572,6 @@ function ContactTableRow({
       onClick={onOpen}
       className="group cursor-pointer border-b border-line last:border-0 transition hover:bg-surface-muted/50"
     >
-      {/* Contact (avatar + name + company) */}
       <td className="px-6 py-3.5">
         <div className="flex items-center gap-3">
           <Avatar name={contact.name} size="sm" />
@@ -650,12 +584,10 @@ function ContactTableRow({
         </div>
       </td>
 
-      {/* Title */}
       <td className="px-6 py-3.5 text-sm text-ink-soft">
         {contact.title || "—"}
       </td>
 
-      {/* Tags */}
       <td className="px-6 py-3.5">
         <div className="flex flex-wrap gap-1">
           {(contact.tags || []).slice(0, 2).map((tag) => (
@@ -677,7 +609,6 @@ function ContactTableRow({
         </div>
       </td>
 
-      {/* Email */}
       <td className="px-6 py-3.5 text-sm text-ink-soft">
         {contact.email ? (
           <a
@@ -692,15 +623,12 @@ function ContactTableRow({
         )}
       </td>
 
-      {/* Phone */}
       <td className="px-6 py-3.5 text-sm text-ink-soft">
         {contact.phone || "—"}
       </td>
 
-      {/* Actions */}
       <td className="px-6 py-3.5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1">
-          {/* Favorite star */}
           <button
             onClick={(e) => onToggleFavorite(e, contact)}
             disabled={favLoading}
@@ -734,16 +662,12 @@ function ContactTableRow({
   );
 }
 
-/* ─── ContactDrawer ──────────────────────────────────────────────────────────
-   Right slide-over detail panel for a single contact.
-   ──────────────────────────────────────────────────────────────────────────── */
 function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
   if (!contact) return null;
 
   return (
     <Drawer open={open} onClose={onClose} title="Contact details">
       <div className="space-y-6">
-        {/* Identity hero */}
         <div className="flex items-center gap-4">
           <Avatar name={contact.name} size="lg" />
           <div>
@@ -766,7 +690,6 @@ function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Contact fields */}
         <div className="rounded-2xl border border-line divide-y divide-line">
           {contact.email && (
             <DrawerRow icon={<Mail className="h-4 w-4" />} label="Email">
@@ -797,7 +720,6 @@ function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
           )}
         </div>
 
-        {/* Tags */}
         {contact.tags?.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-ink-soft uppercase tracking-wide mb-2">
@@ -813,7 +735,6 @@ function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
           </div>
         )}
 
-        {/* Notes */}
         {contact.notes && (
           <div>
             <p className="text-xs font-medium text-ink-soft uppercase tracking-wide mb-2">
@@ -825,13 +746,11 @@ function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
           </div>
         )}
 
-        {/* Meta */}
         <p className="text-xs text-ink-soft">
           Added {shortDate(contact.createdAt)}{" "}
           <span className="opacity-60">({relative(contact.createdAt)})</span>
         </p>
 
-        {/* Action buttons */}
         <div className="flex gap-3 pt-2 border-t border-line">
           <Button variant="outline" className="flex-1" onClick={onEdit}>
             <Pencil className="h-4 w-4" /> Edit
@@ -845,7 +764,6 @@ function ContactDrawer({ open, contact, onClose, onEdit, onDelete }) {
   );
 }
 
-/* ── Single row in the drawer info table ── */
 function DrawerRow({ icon, label, children }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3">
@@ -856,10 +774,6 @@ function DrawerRow({ icon, label, children }) {
   );
 }
 
-/* ─── ContactFormDialog ──────────────────────────────────────────────────────
-   Add / Edit dialog backed by react-hook-form.
-   Tags are entered as a comma-separated string and split on submit.
-   ──────────────────────────────────────────────────────────────────────────── */
 function ContactFormDialog({ open, contact, onClose, onSaved }) {
   const isEdit = Boolean(contact);
 
@@ -870,7 +784,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
     formState: { errors, isSubmitting },
   } = useForm();
 
-  // Reset form defaults when dialog opens or the editing target changes
   useEffect(() => {
     if (open) {
       reset(
@@ -900,7 +813,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
   }, [open, contact, reset]);
 
   const onSubmit = async (values) => {
-    // Parse comma-separated tags into a clean array
     const tags = values.tags
       ? values.tags
           .split(",")
@@ -937,16 +849,14 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
-        {/* Name (required) */}
         <Field label="Full name" error={errors.name?.message}>
           <Input
             {...register("name", { required: "Name is required" })}
-            placeholder="Jane Doe"
+            placeholder="Jassim"
             autoFocus
           />
         </Field>
 
-        {/* Title + Company in a two-column row */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Title">
             <Input {...register("title")} placeholder="Head of Design" />
@@ -956,7 +866,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
           </Field>
         </div>
 
-        {/* Email + Phone */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Email">
             <Input
@@ -974,7 +883,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
           </Field>
         </div>
 
-        {/* Tags — comma-separated */}
         <Field label="Tags" error={errors.tags?.message}>
           <div className="relative">
             <Tag className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
@@ -989,7 +897,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
           </p>
         </Field>
 
-        {/* Notes */}
         <Field label="Notes">
           <Textarea
             {...register("notes")}
@@ -998,7 +905,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
           />
         </Field>
 
-        {/* Favorite toggle */}
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-line px-4 py-3 transition hover:bg-surface-muted select-none">
           <input
             type="checkbox"
@@ -1014,7 +920,6 @@ function ContactFormDialog({ open, contact, onClose, onSaved }) {
           <Star className="ml-auto h-4 w-4 text-amber-400" />
         </label>
 
-        {/* Form actions */}
         <div className="flex gap-3 pt-1">
           <Button
             type="button"

@@ -31,7 +31,6 @@ import { authApi, aiApi } from "../lib/services";
 import { shortDate } from "../lib/format";
 import { cn } from "../lib/utils";
 
-/* ── Small icon accent rendered beside each card title ─────────── */
 function SectionIcon({ icon: Icon, className }) {
   return (
     <div
@@ -45,7 +44,6 @@ function SectionIcon({ icon: Icon, className }) {
   );
 }
 
-/* ── 1. Profile form ────────────────────────────────────────────── */
 function ProfileCard({ user, updateUser }) {
   const {
     register,
@@ -54,7 +52,6 @@ function ProfileCard({ user, updateUser }) {
     formState: { errors, isSubmitting },
   } = useForm();
 
-  // Sync form whenever user object changes (initial load or external update).
   useEffect(() => {
     if (!user) return;
     reset({
@@ -87,7 +84,6 @@ function ProfileCard({ user, updateUser }) {
       </CardHeader>
 
       <CardContent className="pt-5">
-        {/* Avatar preview row */}
         <div className="mb-6 flex items-center gap-4 rounded-2xl border border-line bg-surface-muted px-4 py-3">
           <Avatar name={user?.name} src={user?.avatar} size="lg" />
           <div>
@@ -113,7 +109,6 @@ function ProfileCard({ user, updateUser }) {
               <Input placeholder="Your company" {...register("company")} />
             </Field>
 
-            {/* Email is read-only — changing it requires re-verification */}
             <Field label="Email address">
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
@@ -152,7 +147,6 @@ function ProfileCard({ user, updateUser }) {
   );
 }
 
-/* ── 2. Security / change-password form ────────────────────────── */
 function SecurityCard() {
   const {
     register,
@@ -234,9 +228,8 @@ function SecurityCard() {
   );
 }
 
-/* ── 3. AI Integration status card ─────────────────────────────── */
 function AiIntegrationCard() {
-  const [status, setStatus] = useState(null); // null = loading
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     aiApi
@@ -249,14 +242,13 @@ function AiIntegrationCard() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
-          {/* Sparkles gets a subtly different accent to signal AI distinctiveness */}
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50">
             <Sparkles className="h-4 w-4 text-brand-600" />
           </div>
           <div>
             <CardTitle>AI Integration</CardTitle>
             <CardDescription>
-              Google Gemini powers summaries, email drafts and insights.
+              AI intelligence powers summaries, email drafts and pipeline insights.
             </CardDescription>
           </div>
         </div>
@@ -264,14 +256,12 @@ function AiIntegrationCard() {
 
       <CardContent className="pt-5">
         {status === null ? (
-          /* Loading state — contained so it doesn't stretch the card */
           <div className="flex items-center gap-3 py-2">
             <Spinner className="p-0" />
             <span className="text-sm text-ink-soft">Checking status…</span>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Status + model row */}
             <div className="flex flex-wrap items-center gap-3">
               {status.configured ? (
                 <Badge className="bg-brand-50 text-brand-700 border border-brand-200/60">
@@ -292,22 +282,19 @@ function AiIntegrationCard() {
               )}
             </div>
 
-            {/* Helpful setup note when the key is missing */}
             {!status.configured && (
               <div className="rounded-2xl border border-amber-200/60 bg-amber-50/60 px-4 py-3.5 text-sm text-amber-800">
-                <p className="font-medium mb-1">Connect your Gemini key</p>
+                <p className="font-medium mb-1">Connect your AI API key</p>
                 <p className="text-amber-700/80 leading-relaxed">
                   Add{" "}
                   <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs text-amber-900">
                     GEMINI_API_KEY=your_key_here
                   </code>{" "}
-                  to the backend <code className="font-mono text-xs">.env</code>{" "}
-                  file and restart the server to enable AI features.
+                  to your backend environment configuration and restart the server to enable AI features.
                 </p>
               </div>
             )}
 
-            {/* Confirmation when connected */}
             {status.configured && (
               <p className="text-sm text-ink-soft">
                 AI features are active. Summaries, email drafts, and pipeline
@@ -322,7 +309,6 @@ function AiIntegrationCard() {
   );
 }
 
-/* ── 4. Account info + logout ───────────────────────────────────── */
 function AccountCard({ user, logout }) {
   return (
     <Card>
@@ -338,7 +324,6 @@ function AccountCard({ user, logout }) {
 
       <CardContent className="pt-5">
         <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Role */}
           <div className="rounded-2xl border border-line bg-surface-muted px-4 py-3">
             <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-soft">
               Role
@@ -348,7 +333,6 @@ function AccountCard({ user, logout }) {
             </Badge>
           </div>
 
-          {/* Member since */}
           <div className="rounded-2xl border border-line bg-surface-muted px-4 py-3">
             <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-soft">
               Member since
@@ -369,7 +353,6 @@ function AccountCard({ user, logout }) {
   );
 }
 
-/* ── Page root ──────────────────────────────────────────────────── */
 export default function Settings() {
   const { user, updateUser, logout } = useAuth();
 
